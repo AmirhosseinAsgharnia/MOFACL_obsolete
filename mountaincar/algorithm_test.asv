@@ -1,0 +1,60 @@
+function algorithm_test (Fuzzy_actor , episode )
+
+filename = sprintf('./animation/epoch_%d.gif', episode); % output file
+
+max_iteration = 999;
+
+fig = figure('Visible','off');
+
+set(fig, ...
+    'Units',        'inches', ...
+    'Position',     [0 0 3 3], ...
+    'PaperUnits',   'inches', ...
+    'PaperPosition',[0 0 3 3] ...
+    );
+
+x = -1.2:0.01:0.6;
+y = cos (2 * pi * (x + 1.45) / 1.9);
+
+plot(x,y,'-k');
+
+grid minor
+terminate = 0;
+iteration= 0;
+
+observation = zeros (max_iteration , 2);
+
+observation (1 , :) = [0.2 * rand - 0.6 , 0];
+y = cos (2 * pi * (observation(1 , 1) + 1.45) / 1.9);
+
+ret = rectangle('Position', [observation(1,1)-0.05 y-0.05 0.1 0.1], 'FaceColor', 'red', 'EdgeColor', 'black');
+
+while ~terminate && iteration < max_iteration
+
+    iteration = iteration + 1;
+
+    u = fuzzy_engine_2 ([observation(iteration , 1) , observation(iteration , 2)] , Fuzzy_actor);
+
+    %% taking action
+
+    [observation(iteration + 1 , 1) , observation(iteration + 1 , 2) , ~ , ~ , terminate] = ...
+        agent (observation(iteration , 1) , observation(iteration , 2) , u.res);
+    if mod(iteration , 3) == 0 || iteration == 1 
+        y = cos (2 * pi * (observation(iteration + 1 , 1) + 1.45) / 1.9);
+
+        delete(ret)
+        ret = rectangle('Position', [observation(iteration + 1 , 1)-0.05 y-0.05 0.1 0.1], 'FaceColor', 'red', 'EdgeColor', 'black');
+        xlim([-1.2 0.6]); ylim([-1.2 1.2])
+        frame = getframe(gcf);
+        im = frame2im(frame);
+        [imind,cm] = rgb2ind(im,256);
+
+        if iteration == 1
+            imwrite(imind,cm,filename,'gif','Loopcount',inf,'DelayTime',0.1);
+        else
+            imwrite(imind,cm,filename,'gif','WriteMode','append','DelayTime',0.1);
+        end
+    end
+end
+
+close(fig)
