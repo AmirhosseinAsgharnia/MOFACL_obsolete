@@ -27,5 +27,5 @@ y_l(1) = critic(rule).minimum_members(2);
 y_l(2) = critic(rule).minimum_members(2) + tan(angle_list(angle))*(1 - critic(rule).minimum_members(1));
 
 plot(x_l,y_l,'--k')
-% axis("square")
 title(sprintf("angle: %.2f",angle))
+

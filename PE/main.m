@@ -40,9 +40,9 @@ gama_data.capture_radius = capture_radius;
 
 %% hyper parameters
 
-actor_learning_rate = 0.01;
+actor_learning_rate = 0.05;
 
-critic_learning_rate = 0.05;
+critic_learning_rate = 0.1;
 
 discount_factor = 0.0;
 
@@ -108,6 +108,16 @@ actor.pareto = 0;
 
 actor = repmat (actor , number_of_rules , 1);
 
+%%
+
+for rule = 1 : number_of_rules
+
+    critic(rule).minimum_pareto = min (critic(rule).pareto , [] , 1);
+    critic(rule).minimum_members = min (critic(rule).members , [] , 1);
+
+end
+
+
 %% training loop
 
 test_count = 0;
@@ -122,7 +132,7 @@ for episode = 1 : max_episode
     %% episode simulation
 
     position_agent = zeros (max_iteration , 3);
-    
+
     if rand < 0.25
         position_agent (1 , :) = [0 0 pi/4];
     elseif rand < 0.5
@@ -147,30 +157,26 @@ for episode = 1 : max_episode
         active_rules_1 = fuzzy_engine_3 ([position_agent(iteration , 1) , position_agent(iteration , 2) , position_agent(iteration , 3)] , Fuzzy_test); % Just to check which rules are going be fired.
 
         %% pre-processing the rule-base and exploration - exploitation (distance from origin) (ND is applyed before!)
-        
+
         for rule = active_rules_1.act'
-
-            critic(rule).minimum_pareto = min (critic(rule).pareto , [] , 1);
-
-            critic(rule).minimum_members = min (critic(rule).members , [] , 1);
 
             D = find (critic(rule).index == angle);
 
             Dist = zeros(numel(D),1);
-            
+
             for i = 1:size(D,1)
                 c1 = proj_compare(critic(rule).members(D(i),:), angle_list(angle), critic(rule).minimum_members);
                 Dist(i) = distance_real(c1 , critic(rule).minimum_members);
             end
-            
+
             if rand > 0.8
                 select = randi([1 numel(D)]);
             else
                 [~ , select] = max(Dist);
             end
-            
+
             critic(rule).best_value_index = D (select);
-            
+
             actor_output_parameters(rule) = actor(rule).members (critic(rule).best_value_index);
 
         end
@@ -184,7 +190,7 @@ for episode = 1 : max_episode
         up = u.res + sigma_rand * randn;
 
         %% taking action
-        
+
         p = ode4(@(t , y) agent(t , y , up , speed) , [0 step_time] , position_agent(iteration , :));
 
         position_agent(iteration + 1 , :) = p(end , :);
@@ -194,7 +200,7 @@ for episode = 1 : max_episode
         position_agent = border(position_agent , iteration);
 
         terminate = termination (iteration , capture_radius , position_agent , position_goal , position_pit);
-        
+
         % if ins_mode
         %     plot(position_agent(iteration , 1) , position_agent(iteration , 2),'.b')
         %     drawnow
@@ -220,7 +226,7 @@ for episode = 1 : max_episode
             v_weighted(j , 1) = critic(rule).members(critic(rule).best_value_index , 1);
 
             v_weighted(j , 2) = critic(rule).members(critic(rule).best_value_index , 2);
-            
+
             j = j + 1;
 
         end
@@ -267,7 +273,7 @@ for episode = 1 : max_episode
         firing_strength_counter = 0;
 
         for rule = active_rules_1.act'
-            
+
 
             firing_strength_counter = firing_strength_counter + 1;
 
@@ -279,28 +285,30 @@ for episode = 1 : max_episode
             critic_2 = critic(rule).members(critic(rule).best_value_index , :);
 
             % [Actor_Update_Sign,c1,c2] = proj_compare(critic_1, critic_2, angle_list(angle), critic(rule).minimum_members);
-            
+
             [mag, dir_vec, sign_proj] = proj_on_angle(Delta, angle_list(angle));
-            
+
             actor(rule).members(critic(rule).best_value_index , :) = actor(rule).members(critic(rule).best_value_index,:) + ...
                 actor_learning_rate * sign_proj * (up - u.res) * active_rules_1.phi(firing_strength_counter);
-            
+
             actor(rule).members(critic(rule).best_value_index , :) = max (actor(rule).members(critic(rule).best_value_index , :) , -pi/6);
             actor(rule).members(critic(rule).best_value_index , :) = min (actor(rule).members(critic(rule).best_value_index , :) , +pi/6);
-            [critic , actor] = nondominant_sorting(critic , actor , rule);
 
+
+            critic(rule).members = normalizer (critic(rule).members);
+
+            [critic , actor] = nondominant_sorting(critic , actor , rule);
+            
             critic(rule).minimum_pareto = min (critic(rule).pareto , [] , 1);
 
             critic(rule).minimum_members = min (critic(rule).members , [] , 1);
-            
-
 
         end
-        
+
         %%
-        
+
         if terminate || iteration == max_iteration
-            
+
         end
         %%
     end
@@ -322,11 +330,12 @@ for episode = 1 : max_episode
         fprintf ("--------------------------------------------------------\n");
 
         actor_weights = G_test (critic , actor , angle_list);
-        
+
         for i =1:10
             Fuzzy_actor.weights = actor_weights(:,i);
             algorithm_test (Fuzzy_actor , episode , gama_data , i);
         end
+
         save(sprintf("policy.mat" ))
 
     end
