@@ -292,6 +292,7 @@ for episode = 1 : max_episode
                 actor_learning_rate * sign_proj * (up - u.res) * active_rules_1.phi(firing_strength_counter);
 
             actor(rule).members(critic(rule).best_value_index , :) = max (actor(rule).members(critic(rule).best_value_index , :) , -pi/6);
+            
             actor(rule).members(critic(rule).best_value_index , :) = min (actor(rule).members(critic(rule).best_value_index , :) , +pi/6);
 
 
