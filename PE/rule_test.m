@@ -18,6 +18,9 @@ for i = 1:size(critic(51).members,1)
 
 end
 
+plot(critic(51).minimum_members(1),critic(51).minimum_members(2) , 'or','MarkerFaceColor', 'r')
+plot(critic(51).minimum_pareto(1),critic(51).minimum_pareto(2) , 'ob','MarkerFaceColor', 'b')
+
 x_l    = zeros(2,1);
 x_l(1) = critic(rule).minimum_members(1);
 x_l(2) = 1;

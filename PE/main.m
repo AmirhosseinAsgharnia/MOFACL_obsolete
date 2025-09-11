@@ -19,7 +19,7 @@ max_iteration = max_time_horizon / step_time + 1;
 
 simulation_time = zeros (max_episode , 1);
 
-max_repo_member = 45;
+max_repo_member = 10;
 %% game parameters
 
 dimension = 50;
@@ -46,7 +46,7 @@ critic_learning_rate = 0.1;
 
 discount_factor = 0.0;
 
-num_of_angle = 15;
+num_of_angle = 2;
 
 angle_list = linspace (0 , pi/2 , num_of_angle);
 
@@ -88,7 +88,7 @@ critic.members =0 * ones ( max_repo_member , number_of_objectives);
 
 critic.pareto = 0 * ones ( 1 , number_of_objectives);
 
-critic.index = repmat((1:15)' , 3 , 1);
+critic.index = repmat((1:num_of_angle)' , max_repo_member/num_of_angle , 1);
 
 critic.pareto_index = 0;
 
@@ -144,8 +144,8 @@ for episode = 1 : max_episode
     end
 
     tic
-    % angle = randi ([1 10]);
-    angle = 2;
+    angle = randi ([1 2]);
+    % angle = 2;
     while ~terminate && iteration < max_iteration
 
         iteration = iteration + 1;
@@ -165,8 +165,10 @@ for episode = 1 : max_episode
             Dist = zeros(numel(D),1);
 
             for i = 1:size(D,1)
+
                 c1 = proj_compare(critic(rule).members(D(i),:), angle_list(angle), critic(rule).minimum_members);
                 Dist(i) = distance_real(c1 , critic(rule).minimum_members);
+
             end
 
             if rand > 0.8
@@ -300,18 +302,13 @@ for episode = 1 : max_episode
 
             [critic , actor] = nondominant_sorting(critic , actor , rule);
             
-            critic(rule).minimum_pareto = min (critic(rule).pareto , [] , 1);
-
-            critic(rule).minimum_members = min (critic(rule).members , [] , 1);
-
-        end
-
-        %%
-
-        if terminate || iteration == max_iteration
+            min_par_aux = min (critic(rule).pareto , [] , 1);
+            critic(rule).minimum_pareto = [min(min_par_aux(1) , critic(rule).minimum_pareto(1)) , min(min_par_aux(2) , critic(rule).minimum_pareto(2))];
+        
+            min_mem_aux = min (critic(rule).members , [] , 1);
+            critic(rule).minimum_members = [min(min_mem_aux(1) , critic(rule).minimum_members(1)) , min(min_mem_aux(2) , critic(rule).minimum_members(2))];
 
         end
-        %%
     end
 
     simulation_time (episode) = toc;
@@ -332,7 +329,7 @@ for episode = 1 : max_episode
 
         actor_weights = G_test (critic , actor , angle_list);
 
-        for i =1:10
+        for i =1:1
             Fuzzy_actor.weights = actor_weights(:,i);
             algorithm_test (Fuzzy_actor , episode , gama_data , i);
         end
