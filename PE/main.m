@@ -2,8 +2,6 @@ clear; clc
 
 rng(124)
 
-% ins_mode = 0;
-disp("we are in pareto selector.")
 mkdir("Figs")
 %% simulation time parameters
 
@@ -164,7 +162,7 @@ for episode = 1 : max_episode
     tic
     
     while ~terminate && iteration < max_iteration
-        angle = randi ([1 num_of_angle]);
+        
         iteration = iteration + 1;
 
         %% fired rules (state s)
