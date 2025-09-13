@@ -3,7 +3,7 @@ clear; clc
 rng(124)
 
 % ins_mode = 0;
-
+disp("we are in pareto selector.")
 mkdir("Figs")
 %% simulation time parameters
 
