@@ -4,13 +4,13 @@ number_of_rules = numel (actor);
 
 actor_weights = zeros (number_of_rules , 3);
 
-angle_list = linspace (0 , pi/6 , 10);
+angle_list = linspace (0 , pi/8 , 3);
 
 for rule = 1 : number_of_rules
 
     origin = critic (rule) . minimum_pareto;
 
-    for i = 1:1
+    for i = 1:3
         D = abs ( (critic (rule) . pareto (: , 1) - origin (1) ) * sin (angle_list(i)) - ...
             (critic (rule) . pareto (: , 2) - origin (2) ) * cos (angle_list(i)) );
 
