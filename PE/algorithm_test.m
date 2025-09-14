@@ -103,7 +103,7 @@ for num = 1:3
 
 end
 
-subplot(1,3,2); title("\gamma=0.2","Interpreter","latex")
+subplot(1,3,2); title("$$\gamma=0.2$$","Interpreter","latex")
 
 print(fig, sprintf('Figs/Episode_%d_i.png',episode), '-dpng', '-r300');
 

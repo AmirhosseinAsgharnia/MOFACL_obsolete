@@ -52,7 +52,7 @@ gama_data.capture_radius = capture_radius;
 
 %% hyper parameters
 
-actor_learning_rate = 0.01;
+actor_learning_rate = 0.1;
 
 critic_learning_rate = 0.1;
 
@@ -152,7 +152,9 @@ for episode = 1 : max_episode
     % end
 
     tic
-    
+
+    angle = randi([1 num_of_angle]);
+
     while ~terminate && iteration < max_iteration
         
         iteration = iteration + 1;
@@ -165,7 +167,7 @@ for episode = 1 : max_episode
 
         %% pre-processing the rule-base and exploration - exploitation (distance from origin) (ND is applyed before!)
         
-        angle = randi([1 num_of_angle]);
+        
 
         for rule = active_rules_1.act'
             
