@@ -56,7 +56,7 @@ actor_learning_rate = 0.01;
 
 critic_learning_rate = 0.1;
 
-discount_factor = 0.9;
+discount_factor = 0.2;
 
 num_of_angle = 20;
 

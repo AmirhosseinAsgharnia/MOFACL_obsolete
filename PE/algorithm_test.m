@@ -91,7 +91,8 @@ for num = 1:3
         end
         text(position_agent(plot_color(i),1) , position_agent(plot_color(i),2) , sprintf("\\leftarrow rule: %d",plot_color(i,2)))
     end
-
+    
+    
 
 
     xlim([-10 60]);
@@ -102,6 +103,8 @@ for num = 1:3
 
 end
 
-print(fig, sprintf('Figs/Episode_%d_i_%d.png',episode,number), '-dpng', '-r300');
+subplot(1,3,2); title("\gamma=0.2","Interpreter","latex")
+
+print(fig, sprintf('Figs/Episode_%d_i.png',episode), '-dpng', '-r300');
 
 close(fig)
