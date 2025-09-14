@@ -98,15 +98,15 @@ Fuzzy_test.input_bounds = [0 dimension;0 dimension;-pi pi];
 
 critic.members =2 * ones ( max_repo_member , number_of_objectives);
 
-critic.pareto = 2 * ones ( 1 , number_of_objectives);
+critic.pareto = 2 * ones ( max_repo_member , number_of_objectives);
 
-critic.index = repmat((1:num_of_angle)' , max_repo_member/num_of_angle , 1);
+critic.index = repmat((1:max_repo_member)' , 1 , 1);
 
-critic.pareto_index = 0;
+critic.pareto_index = repmat((1:max_repo_member)' , 1 , 1);
 
-critic.minimum_pareto = 10*ones ( 1 , number_of_objectives);
+critic.minimum_pareto = min (critic.pareto , [] , 1);
 
-critic.minimum_members = 10*ones ( 1 , number_of_objectives);
+critic.minimum_members = min (critic.members , [] , 1);
 
 critic.best_value_index = 1;
 
@@ -116,18 +116,9 @@ critic = repmat (critic , number_of_rules , 1);
 
 actor.members = 0 * ones ( max_repo_member , 1);
 
-actor.pareto = 0;
+actor.pareto = 0 * ones ( max_repo_member , 1);
 
 actor = repmat (actor , number_of_rules , 1);
-
-%%
-
-for rule = 1 : number_of_rules
-
-    critic(rule).minimum_pareto = min (critic(rule).pareto , [] , 1);
-    critic(rule).minimum_members = min (critic(rule).members , [] , 1);
-
-end
 
 
 %% training loop
@@ -144,9 +135,10 @@ for episode = 1 : max_episode
     terminate = 0;
     iteration = 0;
 
-    %% episode simulation
+    %% episode simulation (Start from random or a fixed location)
 
     position_agent = zeros (max_iteration , 3);
+
     position_agent (1 , :) = [50*rand 50*rand 2*pi*rand - pi];
 
     % if rand < 0.25
@@ -172,26 +164,12 @@ for episode = 1 : max_episode
         active_rules_1 = fuzzy_engine_3 ([position_agent(iteration , 1) , position_agent(iteration , 2) , position_agent(iteration , 3)] , Fuzzy_test); % Just to check which rules are going be fired.
 
         %% pre-processing the rule-base and exploration - exploitation (distance from origin) (ND is applyed before!)
+        
+        angle = randi([1 num_of_angle]);
 
         for rule = active_rules_1.act'
-
-            D = find (critic(rule).index == angle);
-
-            Dist = zeros(numel(D),1);
-
-            for i = 1:size(D,1)
-
-                Dist(i) = proj_compare(critic(rule).members(D(i),:), angle_list(angle), critic(rule).minimum_members);
-
-            end
-
-            % if rand > 0.8
-            select = randi([1 numel(D)]);
-            % else
-                % [~ , select] = max(Dist);
-            % end
-
-            critic(rule).best_value_index = D (select);
+            
+            critic(rule) = G_selector (critic(rule) , angle , angle_list);
 
             actor_output_parameters(rule) = actor(rule).members (critic(rule).best_value_index);
 
