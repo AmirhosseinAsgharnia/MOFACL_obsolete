@@ -64,7 +64,7 @@ num_of_angle = 20;
 
 angle_list = linspace (0 , pi/2 , num_of_angle);
 
-sigma_rand = 0.5;
+sigma_rand = 0.0;
 
 %% algorithm parameters
 
@@ -116,7 +116,7 @@ critic = repmat (critic , number_of_rules , 1);
 
 %% actor spaces
 
-actor.members = 0 * ones ( max_repo_member , 1);
+actor.members = 1 * randn ( max_repo_member , 1);
 
 actor.pareto = 0;
 
@@ -275,9 +275,12 @@ for episode = 1 : max_episode
 
         V_s_2 (2) = fuzzy_engine_3 ( [position_agent(iteration + 1, 1) , position_agent(iteration + 1 , 2) , position_agent(iteration + 1 , 3)] , Fuzzy_critic ).res;
 
+        %%
+        
         if terminate
             V_s_2 = V_s_2 * 0;
         end
+
         %% calculating temporal difference (Delta)
 
         Delta = [reward_1 , reward_2] + discount_factor * V_s_2 - V_s_1;
