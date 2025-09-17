@@ -2,8 +2,6 @@ clear; clc
 
 rng(124)
 
-% ins_mode = 0;
-
 mkdir("Figs")
 %% simulation time parameters
 
@@ -106,9 +104,9 @@ critic.index = repmat((1:num_of_angle)' , max_repo_member/num_of_angle , 1);
 
 critic.pareto_index = 0;
 
-critic.minimum_pareto = 10*ones ( 1 , number_of_objectives);
+critic.minimum_pareto = 2*ones ( 1 , number_of_objectives);
 
-critic.minimum_members = 10*ones ( 1 , number_of_objectives);
+critic.minimum_members = 2*ones ( 1 , number_of_objectives);
 
 critic.best_value_index = 1;
 
@@ -162,8 +160,10 @@ for episode = 1 : max_episode
     % end
 
     tic
+
     
     while ~terminate && iteration < max_iteration
+        
         angle = randi ([1 num_of_angle]);
         iteration = iteration + 1;
 
@@ -179,21 +179,7 @@ for episode = 1 : max_episode
 
             D = find (critic(rule).index == angle);
 
-            Dist = zeros(numel(D),1);
-
-            for i = 1:size(D,1)
-
-                Dist(i) = proj_compare(critic(rule).members(D(i),:), angle_list(angle), critic(rule).minimum_members);
-
-            end
-
-            % if rand > 0.8
-            select = randi([1 numel(D)]);
-            % else
-                % [~ , select] = max(Dist);
-            % end
-
-            critic(rule).best_value_index = D (select);
+            critic(rule).best_value_index = D;
 
             actor_output_parameters(rule) = actor(rule).members (critic(rule).best_value_index);
 
@@ -215,9 +201,9 @@ for episode = 1 : max_episode
 
         position_agent(iteration + 1 , 3) = ang_adj(position_agent(iteration + 1 , 3));
 
-        position_agent = border(position_agent , iteration);
+        [position_agent , flag] = border(position_agent , iteration);
 
-        terminate = termination (iteration , capture_radius , position_agent , position_goal , position_pit);
+        terminate = termination (iteration , capture_radius , position_agent , position_goal , position_pit );
 
         %% fired rules (state s')
 
@@ -231,31 +217,31 @@ for episode = 1 : max_episode
         
         %% calculating v_{t}
 
-        v_weighted = zeros (numel(active_rules_1.act) , number_of_objectives );
-
-        j = 1;
-
-        for rule = active_rules_1.act'
-
-            v_weighted(j , 1) = critic(rule).members(critic(rule).best_value_index , 1);
-
-            v_weighted(j , 2) = critic(rule).members(critic(rule).best_value_index , 2);
-
-            j = j + 1;
-
-        end
-
-        V_s_1 = zeros (1 , 2);
-
-        Fuzzy_critic.weights = zeros (number_of_rules , 1);
-
-        Fuzzy_critic.weights(active_rules_1.act) = v_weighted (: , 1);
-
-        V_s_1 (1) = fuzzy_engine_3 ( [position_agent(iteration , 1) , position_agent(iteration , 2) , position_agent(iteration , 3)] , Fuzzy_critic ).res;
-
-        Fuzzy_critic.weights(active_rules_1.act) = v_weighted (: , 2);
-
-        V_s_1 (2) = fuzzy_engine_3 ( [position_agent(iteration , 1) , position_agent(iteration , 2) , position_agent(iteration , 3)] , Fuzzy_critic ).res;
+        % v_weighted = zeros (numel(active_rules_1.act) , number_of_objectives );
+        % 
+        % j = 1;
+        % 
+        % for rule = active_rules_1.act'
+        % 
+        %     v_weighted(j , 1) = critic(rule).members(critic(rule).best_value_index , 1);
+        % 
+        %     v_weighted(j , 2) = critic(rule).members(critic(rule).best_value_index , 2);
+        % 
+        %     j = j + 1;
+        % 
+        % end
+        % 
+        % V_s_1 = zeros (1 , 2);
+        % 
+        % Fuzzy_critic.weights = zeros (number_of_rules , 1);
+        % 
+        % Fuzzy_critic.weights(active_rules_1.act) = v_weighted (: , 1);
+        % 
+        % V_s_1 (1) = fuzzy_engine_3 ( [position_agent(iteration , 1) , position_agent(iteration , 2) , position_agent(iteration , 3)] , Fuzzy_critic ).res;
+        % 
+        % Fuzzy_critic.weights(active_rules_1.act) = v_weighted (: , 2);
+        % 
+        % V_s_1 (2) = fuzzy_engine_3 ( [position_agent(iteration , 1) , position_agent(iteration , 2) , position_agent(iteration , 3)] , Fuzzy_critic ).res;
 
         %% calculating v_{t+1}
 
@@ -283,14 +269,17 @@ for episode = 1 : max_episode
 
         %% calculating temporal difference (Delta)
 
-        Delta = [reward_1 , reward_2] + discount_factor * V_s_2 - V_s_1;
+        
 
         %% updating critic
 
         firing_strength_counter = 0;
 
         for rule = active_rules_1.act'
-
+            
+            Delta = [reward_1 , reward_2] + discount_factor * V_s_2 - [critic(rule).members(critic(rule).best_value_index , 1) ...
+                                                                       critic(rule).members(critic(rule).best_value_index , 2)];
+            
             firing_strength_counter = firing_strength_counter + 1;
 
             critic_1 = critic(rule).members(critic(rule).best_value_index , :);
