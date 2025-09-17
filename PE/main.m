@@ -60,7 +60,7 @@ critic_learning_rate = 0.1;
 
 discount_factor = 0.2;
 
-num_of_angle = 20;
+num_of_angle = max_repo_member;
 
 angle_list = linspace (0 , pi/2 , num_of_angle);
 
