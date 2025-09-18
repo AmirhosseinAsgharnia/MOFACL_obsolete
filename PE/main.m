@@ -40,31 +40,17 @@ gama_data.capture_radius = capture_radius;
 
 %% hyper parameters (It works!)
 
-% actor_learning_rate = 0.01;
-% 
-% critic_learning_rate = 0.1;
-% 
-% discount_factor = 0.2;
-% 
-% num_of_angle = 2;
-% 
-% angle_list = linspace (0 , pi/2 , num_of_angle);
-% 
-% sigma_rand = 1;
-
-%% hyper parameters
-
-actor_learning_rate = 0.05;
+actor_learning_rate = 0.01;
 
 critic_learning_rate = 0.1;
 
 discount_factor = 0.2;
 
-num_of_angle = max_repo_member;
+num_of_angle = 2;
 
 angle_list = linspace (0 , pi/2 , num_of_angle);
 
-sigma_rand = 0.0;
+sigma_rand = 1;
 
 %% algorithm parameters
 
