@@ -1,19 +1,21 @@
 function matrix_G = G_extractor (critic , active_rules , angle , angle_list)
 
-matrix_G = zeros(numel(active_rules.act) , 2);
+matrix_G = zeros(numel(angle_list) , 2 , numel(active_rules.act));
 
-i = 1;
-
+rule_iterator = 0;
 for rule = active_rules.act'
     
+    rule_iterator = rule_iterator + 1;
     origin = critic (rule) . minimum_pareto;
-    
-    D = abs ( (critic (rule) . pareto (: , 1) - origin (1) ) * sin (angle_list(angle)) - (critic (rule) . pareto (: , 2) - origin (2) ) * cos (angle_list(angle)) );
-    
-    [~ , pareto_select] = min(D);
 
-    matrix_G (i,:) = critic (rule) . pareto (pareto_select , :);
-    
-    i = i + 1;
+    for i = 1:numel(angle_list)
+
+        D = abs ( (critic (rule) . pareto (: , 1) - origin (1) ) * sin (angle_list(angle)) - (critic (rule) . pareto (: , 2) - origin (2) ) * cos (angle_list(angle)) );
+
+        [~ , pareto_select] = min(D);
+
+        matrix_G (i , : , rule_iterator) = critic (rule) . pareto (pareto_select , :);
+
+    end
+
 end
-
