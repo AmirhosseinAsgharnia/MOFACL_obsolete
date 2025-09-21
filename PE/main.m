@@ -260,7 +260,7 @@ for episode = 1 : max_episode
     %     algorithm_test (Fuzzy_actor , episode , gama_data , i);
     % 
         save(sprintf("policy.mat" ))
-    % 
+
     end
 
 end
