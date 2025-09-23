@@ -3,6 +3,8 @@ clear; clc
 rng(124)
 
 mkdir("Figs")
+
+update_inspection = true;
 %% simulation time parameters
 
 max_episode = 10000; % maximum times a whole game is played.
@@ -184,7 +186,8 @@ for episode = 1 : max_episode
         %% reward calculation
 
         [reward_1 , reward_2] = reward_function (iteration , position_agent , position_goal , position_pit);
-        
+        reward_1 = 0.8 * reward_1 + reward_2;
+        reward_2 = 0;
         %% calculating v_{t+1}
 
         matrix_G = G_extractor (critic , active_rules_2 , angle_list);
@@ -214,21 +217,38 @@ for episode = 1 : max_episode
         %% calculating temporal difference (Delta)
 
         Delta = [reward_1, reward_2] + discount_factor * V_s;
-
+        
         %% updating critic
+
+        if update_inspection == true
+            fig = figure;
+            set(fig, 'units', 'inches', 'pos', [.5 .5 12 6])
+            set(fig, 'DefaultAxesFontName','Times New Roman')
+            set(fig, 'DefaultAxesFontSize',9)
+            set(fig, 'DefaultTextFontName','Times New Roman')
+            set(fig, 'DefaultTextFontSize',9)
+        else
+            continue
+        end
 
         firing_strength_counter = 0;
 
         for rule = active_rules_1.act'
+
+            critic_1 = critic(rule).pareto;
 
             firing_strength_counter = firing_strength_counter + 1;
 
             critic(rule).pareto = [critic(rule).pareto ; Delta * active_rules_1.phi(firing_strength_counter)];
 
             actor(rule).pareto = [actor(rule).pareto ; up * ones(size(Delta,1) , 1)* active_rules_1.phi(firing_strength_counter)];
+            
+            critic_aux = critic(rule).pareto;
 
             [critic(rule).pareto , R] = ND_opt (critic(rule).pareto);
             
+            critic_2 = critic(rule).pareto;
+
             actor(rule).pareto (R == 1) = [];
 
             [sort_order , ~] = CDE(critic(rule).pareto);
@@ -247,7 +267,17 @@ for episode = 1 : max_episode
 
             critic(rule).minimum_pareto = min(critic(rule).minimum_pareto ,[] ,1);
 
+            if update_inspection == true
+                subplot(2,4,firing_strength_counter)
+                plot(critic_1(:,1), critic_1(:,2),'*r'); hold on
+                plot(critic_2(:,1), critic_2(:,2),'ob');
+                plot(critic_aux(:,1), critic_aux(:,2),'xk');
+                grid minor
+                title(sprintf("Rule: %d", active_rules_1.act(firing_strength_counter)))
+            end
+
         end
+        close(fig)
     end
 
     simulation_time (episode) = toc;
