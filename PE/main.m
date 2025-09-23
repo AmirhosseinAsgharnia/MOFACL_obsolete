@@ -7,7 +7,7 @@ mkdir("Figs")
 
 max_episode = 10000; % maximum times a whole game is played.
 
-test_episode = 100; % each "test_episode" a test without noise is conducted.
+test_episode = 20; % each "test_episode" a test without noise is conducted.
 
 max_time_horizon = 200; % maximum duration of each epoch.
 
@@ -17,7 +17,7 @@ max_iteration = max_time_horizon / step_time + 1;
 
 simulation_time = zeros (max_episode , 1);
 
-max_repo_member = 50;
+max_repo_member = 10;
 %% game parameters
 
 dimension = 50;
@@ -42,13 +42,13 @@ gama_data.capture_radius = capture_radius;
 
 critic_learning_rate = 0.1;
 
-discount_factor = 0.9;
+discount_factor = 0.0;
 
-num_of_angle = 20;
+num_of_angle = 10;
 
 angle_list = linspace (0 , pi/2 , num_of_angle);
 
-sigma_rand = (pi / 4) * 0.5;
+sigma_rand = 0.1;
 
 %% algorithm parameters
 
@@ -62,9 +62,9 @@ number_of_rules = number_of_membership_functions ^ number_of_inputs;
 
 %% fuzzy engine prepration (actor main)
 
-% Fuzzy_actor.input_number = number_of_inputs;
-% Fuzzy_actor.membership_fun_number = number_of_membership_functions;
-% Fuzzy_actor.input_bounds = [0 dimension;0 dimension;-pi pi];
+Fuzzy_actor.input_number = number_of_inputs;
+Fuzzy_actor.membership_fun_number = number_of_membership_functions;
+Fuzzy_actor.input_bounds = [0 dimension;0 dimension;-pi pi];
 
 %% fuzzy engine prepration (actor main)
 
@@ -84,13 +84,13 @@ Fuzzy_test.input_bounds = [0 dimension;0 dimension;-pi pi];
 
 critic.pareto = 0 * ones ( 1 , number_of_objectives);
 critic.minimum_pareto = 0 * ones ( 1 , number_of_objectives);
+critic.select = 0;
 critic = repmat (critic , number_of_rules , 1);
 
 %% actor spaces
 
-% actor.members = 0;
-% actor.pareto = 0;
-% actor = repmat (actor , number_of_rules , 1);
+actor.pareto = 0;
+actor = repmat (actor , number_of_rules , 1);
 
 %% training loop
 
@@ -98,9 +98,9 @@ test_count = 0;
 
 for episode = 1 : max_episode
     
-    sigma_rand = sigma_rand * 10 ^ (log10(0.2)/max_episode);
+    % sigma_rand = sigma_rand * 10 ^ (log10(0.2)/max_episode);
     % actor_learning_rate = actor_learning_rate * 10 ^ (log10(0.5)/max_episode);
-    critic_learning_rate = critic_learning_rate * 10 ^ (log10(0.5)/max_episode);
+    % critic_learning_rate = critic_learning_rate * 10 ^ (log10(0.5)/max_episode);
 
     terminate = 0;
     iteration = 0;
@@ -108,17 +108,17 @@ for episode = 1 : max_episode
     %% episode simulation
 
     position_agent = zeros (max_iteration , 3);
-    % position_agent (1 , :) = [0, 0, pi / 4];
+    position_agent (1 , :) = [0, 0, pi / 4];
 
-    if rand < 0.25
-        position_agent (1 , :) = [0 0 pi/4];
-    elseif rand < 0.5
-        position_agent (1 , :) = [0 50 -pi/4];
-    elseif rand < 0.75
-        position_agent (1 , :) = [50 50 -3*pi/4];
-    else
-        position_agent (1 , :) = [50 0 3*pi/4];
-    end
+    % if rand < 0.25
+    %     position_agent (1 , :) = [0 0 pi/4];
+    % elseif rand < 0.5
+    %     position_agent (1 , :) = [0 50 -pi/4];
+    % elseif rand < 0.75
+    %     position_agent (1 , :) = [50 50 -3*pi/4];
+    % else
+    %     position_agent (1 , :) = [50 0 3*pi/4];
+    % end
 
     tic
     
@@ -133,34 +133,30 @@ for episode = 1 : max_episode
         active_rules_1 = fuzzy_engine_3 ([position_agent(iteration , 1) , position_agent(iteration , 2) , position_agent(iteration , 3)] , Fuzzy_test); % Just to check which rules are going be fired.
 
         %% pre-processing the rule-base and exploration - exploitation (distance from origin) (ND is applyed before!)
+        
+        angle = randi([1 num_of_angle]);
 
-        % for rule = active_rules_1.act'
-        % 
-        %     Dist = zeros(max_repo_member , 1);
-        % 
-        %     for i = 1 : max_repo_member
-        %         Dist(i) = proj_compare(critic(rule).members(i , :), angle_list(angle), critic(rule).minimum_members);
-        %     end
-        % 
-        %     if rand > 0.5
-        %         select = randi([1 max_repo_member]);
-        %     else
-        %         [~ , select] = max(Dist);
-        %     end
-        % 
-        %     critic(rule).select = select;
-        % 
-        %     actor_output_parameters(rule) = actor(rule).members (critic(rule).select);
-        % 
-        % end
+        for rule = active_rules_1.act'
+
+            origin = critic (rule) . minimum_pareto;
+
+            D = abs ( (critic (rule) . pareto (: , 1) - origin (1) ) * sin (angle_list(angle)) - (critic (rule) . pareto (: , 2) - origin (2) ) * cos (angle_list(angle)) );
+    
+            [~ , select] = min(D);
+
+            critic(rule).select = select;
+
+            actor_output_parameters(rule) = actor(rule).pareto (select);
+
+        end
 
         %% selecting action
 
-        % Fuzzy_actor.weights = actor_output_parameters;
+        Fuzzy_actor.weights = actor_output_parameters;
 
-        % u = fuzzy_engine_3 ([position_agent(iteration , 1) , position_agent(iteration , 2) , position_agent(iteration , 3)] , Fuzzy_actor);
+        u = fuzzy_engine_3 ([position_agent(iteration , 1) , position_agent(iteration , 2) , position_agent(iteration , 3)] , Fuzzy_actor);
 
-        up = max( -pi/6 , min ( pi/6 , randn * sigma_rand));
+        up = max( -pi/6 , min ( pi/6 , u.res + randn * sigma_rand));
 
         %% taking action
 
@@ -229,13 +225,28 @@ for episode = 1 : max_episode
 
             critic(rule).pareto = [critic(rule).pareto ; Delta * active_rules_1.phi(firing_strength_counter)];
 
+            actor(rule).pareto = [actor(rule).pareto ; up * ones(size(Delta,1) , 1)* active_rules_1.phi(firing_strength_counter)];
+
             [critic(rule).pareto , R] = ND_opt (critic(rule).pareto);
             
+            actor(rule).pareto (R == 1) = [];
+
             [sort_order , ~] = CDE(critic(rule).pareto);
             
-            if numel(sort_order) > 20
-                critic(rule).pareto = critic(rule).pareto(sort_order(1:20),:);
+            if numel(sort_order) > max_repo_member
+
+                critic(rule).pareto = critic(rule).pareto(sort_order(1:max_repo_member),:);
+                actor(rule).pareto = actor(rule).pareto(sort_order(1:max_repo_member),:);
+
+            else
+
+                critic(rule).pareto = critic(rule).pareto(sort_order,:);
+                actor(rule).pareto = actor(rule).pareto(sort_order,:);    
+
             end
+
+            critic(rule).minimum_pareto = min(critic(rule).minimum_pareto ,[] ,1);
+
         end
     end
 
@@ -248,17 +259,16 @@ for episode = 1 : max_episode
     fprintf ("--------------------------------------------------------\n");
 
     if mod( episode , test_episode ) == 0 || episode == 1
-    % 
-    %     test_count = test_count + 1;
-    %     fprintf ("--------------------------------------------------------\n");
-    %     fprintf ("Test number %d has been started.\n" , test_count);
-    %     fprintf ("--------------------------------------------------------\n");
-    % 
-    %     actor_weights = G_test (critic , actor , angle_list);
-    % 
-    %     Fuzzy_actor.weights = actor_weights;
-    %     algorithm_test (Fuzzy_actor , episode , gama_data , i);
-    % 
+
+        test_count = test_count + 1;
+        fprintf ("--------------------------------------------------------\n");
+        fprintf ("Test number %d has been started.\n" , test_count);
+        fprintf ("--------------------------------------------------------\n");
+
+        actor_weights = G_test (critic , actor , angle_list);
+
+        Fuzzy_actor.weights = actor_weights;
+        algorithm_test (Fuzzy_actor , episode , gama_data );
         save(sprintf("policy.mat" ))
 
     end

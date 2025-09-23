@@ -1,4 +1,4 @@
-function algorithm_test (Fuzzy_actor , episode , gama_data , number)
+function algorithm_test (Fuzzy_actor , episode , gama_data )
 
 fig = figure('Visible','off');
 
@@ -102,6 +102,6 @@ for num = 1:3
 
 end
 
-print(fig, sprintf('Figs/Episode_%d_i_%d.png',episode,number), '-dpng', '-r300');
+print(fig, sprintf('Figs/Episode_%d_i_%d.png',episode), '-dpng', '-r300');
 
 close(fig)
