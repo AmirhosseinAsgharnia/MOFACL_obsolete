@@ -1,10 +1,10 @@
 clear; clc
 
-rng(124)
+rng(112)
 
 mkdir("Figs")
 
-update_inspection = true;
+update_inspection = false;
 %% simulation time parameters
 
 max_episode = 10000; % maximum times a whole game is played.
@@ -50,7 +50,7 @@ num_of_angle = 10;
 
 angle_list = linspace (0 , pi/2 , num_of_angle);
 
-sigma_rand = 0.1;
+sigma_rand = 1;
 
 %% algorithm parameters
 
@@ -112,21 +112,32 @@ for episode = 1 : max_episode
     position_agent = zeros (max_iteration , 3);
     position_agent (1 , :) = [0, 0, pi / 4];
 
-    % if rand < 0.25
-    %     position_agent (1 , :) = [0 0 pi/4];
-    % elseif rand < 0.5
-    %     position_agent (1 , :) = [0 50 -pi/4];
-    % elseif rand < 0.75
-    %     position_agent (1 , :) = [50 50 -3*pi/4];
-    % else
-    %     position_agent (1 , :) = [50 0 3*pi/4];
-    % end
+    if update_inspection == true
+        fig_play = figure;
+        ax_play = axes('Parent', fig_play);  % store axis handle
+        set(fig_play, 'units', 'inches', 'pos', [.5 .5 6 6])
+        set(fig_play, 'DefaultAxesFontName','Times New Roman')
+        set(fig_play, 'DefaultAxesFontSize',9)
+        set(fig_play, 'DefaultTextFontName','Times New Roman')
+        set(fig_play, 'DefaultTextFontSize',9)
+    end
 
     tic
     
     while ~terminate && iteration < max_iteration
 
         iteration = iteration + 1;
+
+        if update_inspection == true
+            plot(ax_play, position_agent(iteration, 1), position_agent(iteration, 2), '.b'); hold on
+            if iteration == 1
+                plot(ax_play, position_goal(1) + capture_radius * cos(0:0.01:2*pi), position_goal(2) + capture_radius * sin(0:0.01:2*pi) , '-g')
+                plot(ax_play, position_pit(1) + capture_radius * cos(0:0.01:2*pi), position_pit(2) + capture_radius * sin(0:0.01:2*pi) , '-r')
+                grid on
+            end
+            xlim([0 dimension]); ylim([0 dimension])
+            axis('square')
+        end
 
         %% fired rules (state s)
 
@@ -143,7 +154,7 @@ for episode = 1 : max_episode
             origin = critic (rule) . minimum_pareto;
 
             D = abs ( (critic (rule) . pareto (: , 1) - origin (1) ) * sin (angle_list(angle)) - (critic (rule) . pareto (: , 2) - origin (2) ) * cos (angle_list(angle)) );
-    
+
             [~ , select] = min(D);
 
             critic(rule).select = select;
@@ -159,7 +170,7 @@ for episode = 1 : max_episode
         u = fuzzy_engine_3 ([position_agent(iteration , 1) , position_agent(iteration , 2) , position_agent(iteration , 3)] , Fuzzy_actor);
 
         up = max( -pi/6 , min ( pi/6 , u.res + randn * sigma_rand));
-
+        % up = max( -pi/6 , min ( pi/6 , u.res + randn * sigma_rand));
         %% taking action
 
         p = ode4(@(t , y) agent(t , y , up , speed) , [0 step_time] , position_agent(iteration , :));
@@ -180,14 +191,13 @@ for episode = 1 : max_episode
         
         for rule = active_rules_2.act'
 
-            critic(rule).minimum_pareto = min(critic(rule).pareto , [] , 1);
+            critic(rule).minimum_pareto = min(critic(rule).pareto(:,1:number_of_objectives) , [] , 1);
 
         end
         %% reward calculation
 
         [reward_1 , reward_2] = reward_function (iteration , position_agent , position_goal , position_pit);
-        reward_1 = 0.8 * reward_1 + reward_2;
-        reward_2 = 0;
+        
         %% calculating v_{t+1}
 
         matrix_G = G_extractor (critic , active_rules_2 , angle_list);
@@ -227,8 +237,6 @@ for episode = 1 : max_episode
             set(fig, 'DefaultAxesFontSize',9)
             set(fig, 'DefaultTextFontName','Times New Roman')
             set(fig, 'DefaultTextFontSize',9)
-        else
-            continue
         end
 
         firing_strength_counter = 0;
@@ -236,20 +244,18 @@ for episode = 1 : max_episode
         for rule = active_rules_1.act'
 
             critic_1 = critic(rule).pareto;
-
+            
             firing_strength_counter = firing_strength_counter + 1;
 
-            critic(rule).pareto = [critic(rule).pareto ; Delta * active_rules_1.phi(firing_strength_counter)];
-
-            actor(rule).pareto = [actor(rule).pareto ; up * ones(size(Delta,1) , 1)* active_rules_1.phi(firing_strength_counter)];
+            critic(rule).pareto = [(1 - critic_learning_rate) * critic(rule).pareto ;  Delta];
             
-            critic_aux = critic(rule).pareto;
+            actor(rule).pareto = [actor(rule).pareto ;  up * ones(size(Delta, 1),1) * active_rules_1.phi(firing_strength_counter)];
 
             [critic(rule).pareto , R] = ND_opt (critic(rule).pareto);
             
-            critic_2 = critic(rule).pareto;
+            actor(rule).pareto(R == 1) = [];
 
-            actor(rule).pareto (R == 1) = [];
+            critic_2 = critic(rule).pareto;
 
             [sort_order , ~] = CDE(critic(rule).pareto);
             
@@ -260,26 +266,35 @@ for episode = 1 : max_episode
 
             else
 
-                critic(rule).pareto = critic(rule).pareto(sort_order,:);
-                actor(rule).pareto = actor(rule).pareto(sort_order,:);    
+                critic(rule).pareto = critic(rule).pareto(sort_order,:);   
+                actor(rule).pareto = actor(rule).pareto(sort_order,:);
 
             end
 
-            critic(rule).minimum_pareto = min(critic(rule).minimum_pareto ,[] ,1);
+            critic(rule).minimum_pareto = min(critic(rule).pareto(:,1:number_of_objectives) ,[] ,1);
 
             if update_inspection == true
                 subplot(2,4,firing_strength_counter)
                 plot(critic_1(:,1), critic_1(:,2),'*r'); hold on
                 plot(critic_2(:,1), critic_2(:,2),'ob');
                 plot(critic_aux(:,1), critic_aux(:,2),'xk');
+
+                legend("C_1","C_2","C_aux")
                 grid minor
                 title(sprintf("Rule: %d", active_rules_1.act(firing_strength_counter)))
+
+                ylabel("Reward 2"); xlabel("Reward 1")
             end
 
         end
-        close(fig)
-    end
 
+        if update_inspection == true
+            close(fig)
+        end
+    end
+    if update_inspection == true
+        close(fig_play)
+    end
     simulation_time (episode) = toc;
 
     fprintf ("--------------------------------------------------------\n");
